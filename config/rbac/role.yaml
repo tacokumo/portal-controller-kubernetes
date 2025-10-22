@@ -1,0 +1,35 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - tacokumo.io
+  resources:
+  - applications
+  - portals
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - tacokumo.io
+  resources:
+  - applications/finalizers
+  - portals/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - tacokumo.io
+  resources:
+  - applications/status
+  - portals/status
+  verbs:
+  - get
+  - patch
+  - update
