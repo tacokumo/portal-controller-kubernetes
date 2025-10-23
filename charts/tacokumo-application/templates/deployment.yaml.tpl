@@ -18,5 +18,5 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Values.main.applicationName }}
-          image: "{{ .Values.main.image.repository }}:{{ .Values.main.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.main.image.pullPolicy }}
+          image: "{{ .Values.main.image }}"
+          imagePullPolicy: {{ .Values.main.imagePullPolicy }}

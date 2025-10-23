@@ -65,7 +65,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	manager := application.NewManager(logger, r.Client)
+	manager := application.NewManager(logger, r.Client, ".")
 
 	if err := manager.Reconcile(ctx, &app); err != nil {
 		logger.Error(err, "failed to reconcile with manager")

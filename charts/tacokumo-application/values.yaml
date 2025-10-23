@@ -1,8 +1,6 @@
 main:
   applicationName: nginx-app
   replicaCount: 1
-  image:
-    repository: nginx
-    pullPolicy: IfNotPresent
-    tag: "latest"
+  image: "nginx:latest"
   imagePullSecrets: []
+  imagePullPolicy: IfNotPresent

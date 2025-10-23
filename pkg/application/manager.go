@@ -2,9 +2,15 @@ package application
 
 import (
 	"context"
+	"path/filepath"
 
 	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
+	tacokumoapplication "tacokumo/portal-controller-kubernetes/charts/tacokumo-application"
 	"tacokumo/portal-controller-kubernetes/pkg/appconfig"
+	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
+
+	"go.yaml.in/yaml/v2"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/go-git/go-billy/v6/memfs"
 	"github.com/go-git/go-git/v6"
@@ -12,19 +18,23 @@ import (
 	"github.com/go-git/go-git/v6/storage/memory"
 	"github.com/go-logr/logr"
 	apispec "github.com/tacokumo/api-spec"
-	"go.yaml.in/yaml/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Manager struct {
 	logger    logr.Logger
 	k8sClient client.Client
+	workdir   string
 }
 
-func NewManager(logger logr.Logger, k8sClient client.Client) *Manager {
+func NewManager(
+	logger logr.Logger,
+	k8sClient client.Client,
+	workdir string) *Manager {
 	return &Manager{
 		logger:    logger,
 		k8sClient: k8sClient,
+		workdir:   workdir,
 	}
 }
 
@@ -58,9 +68,34 @@ func (m *Manager) reconcileOnProvisioningState(
 	ctx context.Context,
 	app *tacokumoiov1alpha1.Application,
 ) (err error) {
-	_, err = m.cloneApplicationRepository(ctx, app)
+	repo, err := m.cloneApplicationRepository(ctx, app)
 	if err != nil {
 		return err
+	}
+
+	values := m.constructValues(repo, app)
+
+	chartPath := filepath.Join(m.workdir, "charts", "tacokumo-application")
+
+	valueMap, err := helmutil.StructToValueMap(values)
+	if err != nil {
+		return err
+	}
+	manifests, err := helmutil.RenderChart(chartPath, app.Name, app.Namespace, valueMap)
+	if err != nil {
+		return err
+	}
+
+	objects, err := helmutil.ParseManifestsToUnstructured(manifests)
+	if err != nil {
+		return err
+	}
+
+	for _, obj := range objects {
+		obj.SetNamespace(app.Namespace)
+		if err := createOrUpdateObject(ctx, m.k8sClient, obj); err != nil {
+			return err
+		}
 	}
 
 	app.Status.State = tacokumoiov1alpha1.ApplicationStateWaiting
@@ -68,7 +103,7 @@ func (m *Manager) reconcileOnProvisioningState(
 }
 
 func (m *Manager) reconcileOnWaitingState(
-	ctx context.Context,
+	_ context.Context,
 	app *tacokumoiov1alpha1.Application,
 ) (err error) {
 	// TODO: deploymentのPodがすべてReadyになっていることを確認する
@@ -111,4 +146,37 @@ func (m *Manager) cloneApplicationRepository(
 	return appconfig.Repository{
 		AppConfig: appConfig,
 	}, nil
+}
+
+func (m *Manager) constructValues(
+	repo appconfig.Repository,
+	_ *tacokumoiov1alpha1.Application,
+) tacokumoapplication.Values {
+	values := tacokumoapplication.Values{
+		Main: tacokumoapplication.MainApplicationValues{
+			ApplicationName: repo.AppConfig.AppName,
+			ReplicaCount:    1,
+			Image:           repo.AppConfig.Build.Image,
+		},
+	}
+	return values
+}
+
+func createOrUpdateObject(ctx context.Context, k8sClient client.Client, obj *unstructured.Unstructured) error {
+	existingObj := &unstructured.Unstructured{}
+	existingObj.SetGroupVersionKind(obj.GroupVersionKind())
+	err := k8sClient.Get(ctx, client.ObjectKey{
+		Namespace: obj.GetNamespace(),
+		Name:      obj.GetName(),
+	}, existingObj)
+	if err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		// Not found, create
+		return k8sClient.Create(ctx, obj)
+	}
+	// Found, update
+	obj.SetResourceVersion(existingObj.GetResourceVersion())
+	return k8sClient.Update(ctx, obj)
 }
