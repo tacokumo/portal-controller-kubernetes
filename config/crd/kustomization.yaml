@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/tacokumo.io.tacokumo.io_applications.yaml
+- bases/tacokumo.io.tacokumo.io_portals.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

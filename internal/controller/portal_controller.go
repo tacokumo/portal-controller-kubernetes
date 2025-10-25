@@ -28,39 +28,39 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
-	"tacokumo/portal-controller-kubernetes/pkg/application"
+	"tacokumo/portal-controller-kubernetes/pkg/portal"
 	"tacokumo/portal-controller-kubernetes/pkg/requeue"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-// ApplicationReconciler reconciles a Application object
-type ApplicationReconciler struct {
+// PortalReconciler reconciles a Portal object
+type PortalReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=tacokumo.io.tacokumo.io,resources=applications,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=tacokumo.io.tacokumo.io,resources=applications/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=tacokumo.io.tacokumo.io,resources=applications/finalizers,verbs=update
+// +kubebuilder:rbac:groups=tacokumo.io.tacokumo.io,resources=portals,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=tacokumo.io.tacokumo.io,resources=portals/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=tacokumo.io.tacokumo.io,resources=portals/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the Application object against the actual cluster state, and then
+// the Portal object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.22.1/pkg/reconcile
-func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *PortalReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logf.FromContext(ctx)
 	key := types.NamespacedName{
 		Namespace: req.Namespace,
 		Name:      req.Name,
 	}
-	app := tacokumoiov1alpha1.Application{}
-	if err := r.Get(ctx, key, &app); err != nil {
+	p := tacokumoiov1alpha1.Portal{}
+	if err := r.Get(ctx, key, &p); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
@@ -68,9 +68,9 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	manager := application.NewManager(logger, r.Client, ".")
+	manager := portal.NewManager(logger, r.Client, ".")
 
-	if err := manager.Reconcile(ctx, &app); err != nil {
+	if err := manager.Reconcile(ctx, &p); err != nil {
 		if errors.As(err, &requeue.Error{}) {
 			logger.Info("requeuing due to requeue error", "reason", err.Error())
 			return ctrl.Result{RequeueAfter: time.Second * 2}, nil
@@ -80,13 +80,14 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
+	// 成功した場合も、stateを変化させたあとの操作が必要なので、再度Requeueする
 	return ctrl.Result{RequeueAfter: time.Second * 2}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *PortalReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&tacokumoiov1alpha1.Application{}).
-		Named("application").
+		For(&tacokumoiov1alpha1.Portal{}).
+		Named("portal").
 		Complete(r)
 }
