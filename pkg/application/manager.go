@@ -4,10 +4,13 @@ import (
 	"context"
 	"path/filepath"
 
+	"github.com/cockroachdb/errors"
+
 	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
 	tacokumoapplication "tacokumo/portal-controller-kubernetes/charts/tacokumo-application"
 	"tacokumo/portal-controller-kubernetes/pkg/appconfig"
 	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
+	"tacokumo/portal-controller-kubernetes/pkg/requeue"
 
 	"go.yaml.in/yaml/v2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -19,6 +22,9 @@ import (
 	"github.com/go-logr/logr"
 	apispec "github.com/tacokumo/api-spec"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type Manager struct {
@@ -45,11 +51,11 @@ func (m *Manager) Reconcile(
 	switch app.Status.State {
 	case tacokumoiov1alpha1.ApplicationStateProvisioning:
 		if err := m.reconcileOnProvisioningState(ctx, app); err != nil {
-			return err
+			return m.handleError(ctx, app, err)
 		}
 	case tacokumoiov1alpha1.ApplicationStateWaiting:
 		if err := m.reconcileOnWaitingState(ctx, app); err != nil {
-			return err
+			return m.handleError(ctx, app, err)
 		}
 	default:
 		// すぐ遷移して終了
@@ -58,10 +64,27 @@ func (m *Manager) Reconcile(
 	}
 
 	if err := m.k8sClient.Status().Update(ctx, app); err != nil {
-		return err
+		return m.handleError(ctx, app, err)
 	}
 
 	return nil
+}
+
+func (m *Manager) handleError(
+	ctx context.Context,
+	app *tacokumoiov1alpha1.Application,
+	err error,
+) error {
+	// 引数のerrorは必ずnilではない
+	app.Status.State = tacokumoiov1alpha1.ApplicationStateError
+	// errorだとしても､Statusの更新は必要
+	if updateErr := m.k8sClient.Status().Update(ctx, app); updateErr != nil {
+		return updateErr
+	}
+	if errors.As(err, &requeue.Error{}) {
+		return nil
+	}
+	return err
 }
 
 func (m *Manager) reconcileOnProvisioningState(
@@ -103,10 +126,50 @@ func (m *Manager) reconcileOnProvisioningState(
 }
 
 func (m *Manager) reconcileOnWaitingState(
-	_ context.Context,
+	ctx context.Context,
 	app *tacokumoiov1alpha1.Application,
 ) (err error) {
-	// TODO: deploymentのPodがすべてReadyになっていることを確認する
+	deploymentList := appsv1.DeploymentList{}
+	err = m.k8sClient.List(ctx, &deploymentList, client.InNamespace(app.Namespace), client.MatchingLabels{
+		tacokumoiov1alpha1.ManagedByLabelKey: "portal-controller",
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, deployment := range deploymentList.Items {
+		app.Status.Deployments = append(app.Status.Deployments, tacokumoiov1alpha1.NamespacedName{
+			Namespace: deployment.GetNamespace(),
+			Name:      deployment.GetName(),
+		})
+	}
+
+	podList := corev1.PodList{}
+	err = m.k8sClient.List(ctx, &podList, client.InNamespace(app.Namespace), client.MatchingLabels{
+		tacokumoiov1alpha1.ManagedByLabelKey: "portal-controller",
+	})
+	if err != nil {
+		return err
+	}
+
+	allReady := true
+	for _, pod := range podList.Items {
+		if pod.Status.Phase != corev1.PodRunning {
+			allReady = false
+		}
+
+		app.Status.Pods = append(app.Status.Pods, tacokumoiov1alpha1.PodReference{
+			NamespacedName: tacokumoiov1alpha1.NamespacedName{
+				Namespace: pod.GetNamespace(),
+				Name:      pod.GetName(),
+			},
+			Ready: pod.Status.Phase == corev1.PodRunning,
+		})
+	}
+
+	if !allReady {
+		return requeue.NewError("some pods are not ready yet")
+	}
 
 	// TODO: healthcheckを実行もしくは監視し、成功していることを確認する
 	app.Status.State = tacokumoiov1alpha1.ApplicationStateRunning

@@ -22,3 +22,8 @@ type NamespacedName struct {
 	Namespace string `json:"namespace"`
 	Name      string `json:"name"`
 }
+
+type PodReference struct {
+	NamespacedName `json:",inline"`
+	Ready          bool `json:"ready"`
+}

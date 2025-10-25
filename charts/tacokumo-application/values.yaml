@@ -4,3 +4,7 @@ main:
   image: "nginx:latest"
   imagePullSecrets: []
   imagePullPolicy: IfNotPresent
+  annotations:
+    tacokumo.io/managed-by: "portal-controller"
+  podAnnotations:
+    tacokumo.io/managed-by: "portal-controller"

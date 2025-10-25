@@ -9,9 +9,11 @@ type Values struct {
 
 // MainApplicationValuesは、ユーザがデプロイしたいアプリケーションのコンテナについての設定を表します。
 type MainApplicationValues struct {
-	ApplicationName  string   `yaml:"applicationName"`
-	ReplicaCount     int      `yaml:"replicaCount"`
-	Image            string   `yaml:"image"`
-	ImagePullPolicy  string   `yaml:"imagePullPolicy"`
-	ImagePullSecrets []string `yaml:"imagePullSecrets"`
+	ApplicationName  string            `yaml:"applicationName"`
+	ReplicaCount     int               `yaml:"replicaCount"`
+	Image            string            `yaml:"image"`
+	ImagePullPolicy  string            `yaml:"imagePullPolicy"`
+	ImagePullSecrets []string          `yaml:"imagePullSecrets"`
+	Annotations      map[string]string `yaml:"annotations"`
+	PodAnnotations   map[string]string `yaml:"podAnnotations"`
 }

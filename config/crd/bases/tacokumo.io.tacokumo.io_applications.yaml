@@ -133,6 +133,21 @@ spec:
                   - namespace
                   type: object
                 type: array
+              pods:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    ready:
+                      type: boolean
+                  required:
+                  - name
+                  - namespace
+                  - ready
+                  type: object
+                type: array
               state:
                 type: string
             type: object

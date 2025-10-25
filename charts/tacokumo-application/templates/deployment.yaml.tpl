@@ -2,6 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Values.main.applicationName }}
+  annotations:
+    {{- with .Values.main.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   replicas: {{ .Values.main.replicaCount }}
   selector:
@@ -11,6 +15,10 @@ spec:
     metadata:
       labels:
         application: {{ .Values.main.applicationName }}
+      annotations:
+        {{- with .Values.main.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       {{- with .Values.main.imagePullSecrets }}
       imagePullSecrets:

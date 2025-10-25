@@ -43,6 +43,7 @@ type ApplicationStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	Deployments []NamespacedName `json:"deployments,omitempty"`
+	Pods        []PodReference   `json:"pods,omitempty"`
 	State       string           `json:"state,omitempty"`
 }
 
@@ -56,6 +57,9 @@ const (
 	ApplicationStateWaiting = "Waiting"
 	// ApplicationStateRunning はアプリケーションが正常に稼働していることを示します
 	ApplicationStateRunning = "Running"
+	// ApplicationStateError はアプリケーションの稼働に問題があることを示します
+	// conditionsに詳細が記録されます
+	ApplicationStateError = "Error"
 )
 
 // +kubebuilder:object:root=true
