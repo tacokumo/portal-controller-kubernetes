@@ -8,6 +8,7 @@ rules:
   - tacokumo.io.tacokumo.io
   resources:
   - applications
+  - portals
   verbs:
   - create
   - delete
@@ -20,12 +21,14 @@ rules:
   - tacokumo.io.tacokumo.io
   resources:
   - applications/finalizers
+  - portals/finalizers
   verbs:
   - update
 - apiGroups:
   - tacokumo.io.tacokumo.io
   resources:
   - applications/status
+  - portals/status
   verbs:
   - get
   - patch

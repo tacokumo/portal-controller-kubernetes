@@ -58,15 +58,12 @@ func (m *Manager) Reconcile(
 			return m.handleError(ctx, app, err)
 		}
 	default:
-		// すぐ遷移して終了
 		app.Status.State = tacokumoiov1alpha1.ApplicationStateProvisioning
-		return nil
 	}
 
 	if err := m.k8sClient.Status().Update(ctx, app); err != nil {
 		return m.handleError(ctx, app, err)
 	}
-
 	return nil
 }
 

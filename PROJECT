@@ -18,4 +18,12 @@ resources:
   kind: Application
   path: tacokumo/portal-controller-kubernetes/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: tacokumo.io
+  group: tacokumo.io
+  kind: Portal
+  path: tacokumo/portal-controller-kubernetes/api/v1alpha1
+  version: v1alpha1
 version: "3"
