@@ -2,10 +2,13 @@ package portal
 
 import (
 	"context"
+	"path/filepath"
 
 	"github.com/cockroachdb/errors"
 
 	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
+	tacokumoportal "tacokumo/portal-controller-kubernetes/charts/tacokumo-portal"
+	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
 	"tacokumo/portal-controller-kubernetes/pkg/requeue"
 
 	"github.com/go-logr/logr"
@@ -44,6 +47,14 @@ func (m *Manager) Reconcile(
 		if err := m.reconcileOnProvisioningState(ctx, p); err != nil {
 			return m.handleError(ctx, p, err)
 		}
+	case tacokumoiov1alpha1.PortalStateWaiting:
+		if err := m.reconcileOnWaitingState(ctx, p); err != nil {
+			return m.handleError(ctx, p, err)
+		}
+	case tacokumoiov1alpha1.PortalStateRunning:
+		// TODO: 差分を検知したらProvisioningに戻す
+	case tacokumoiov1alpha1.PortalStateError:
+		// TODO: 差分を検知したらProvisioningに戻す
 	default:
 		p.Status.State = tacokumoiov1alpha1.PortalStateProvisioning
 	}
@@ -77,9 +88,60 @@ func (m *Manager) reconcileOnProvisioningState(
 		return requeue.NewError("waiting for Namespace to be created")
 	}
 
-	// TODO: portal helm chartをnamespaceにinstallする処理を追加
+	values := m.constructValues(p)
+
+	chartPath := filepath.Join(m.workdir, "charts", "tacokumo-portal")
+
+	valueMap, err := helmutil.StructToValueMap(values)
+	if err != nil {
+		return err
+	}
+	manifests, err := helmutil.RenderChart(chartPath, p.Name, p.Name, valueMap)
+	if err != nil {
+		return err
+	}
+
+	objects, err := helmutil.ParseManifestsToUnstructured(manifests)
+	if err != nil {
+		return err
+	}
+
+	for _, obj := range objects {
+		obj.SetNamespace(p.Name)
+		if err := helmutil.CreateOrUpdateObject(ctx, m.k8sClient, obj); err != nil {
+			return err
+		}
+	}
 
 	p.Status.State = tacokumoiov1alpha1.PortalStateWaiting
+	return nil
+}
+
+func (m *Manager) reconcileOnWaitingState(
+	ctx context.Context,
+	p *tacokumoiov1alpha1.Portal,
+) error {
+	podList := corev1.PodList{}
+	err := m.k8sClient.List(ctx, &podList, client.InNamespace(p.Name), client.MatchingLabels{
+		tacokumoiov1alpha1.ManagedByLabelKey: "portal-controller",
+	})
+	if err != nil {
+		return err
+	}
+
+	allReady := true
+	for _, pod := range podList.Items {
+		if pod.Status.Phase != corev1.PodRunning {
+			allReady = false
+		}
+	}
+
+	if !allReady {
+		return requeue.NewError("some pods are not ready yet")
+	}
+
+	// TODO: healthcheckを実行もしくは監視し、成功していることを確認する
+	p.Status.State = tacokumoiov1alpha1.PortalStateRunning
 	return nil
 }
 
@@ -98,4 +160,14 @@ func (m *Manager) handleError(
 		return nil
 	}
 	return err
+}
+
+func (m *Manager) constructValues(
+	p *tacokumoiov1alpha1.Portal,
+) tacokumoportal.Values {
+	values := tacokumoportal.Values{
+		Namespace:  p.Name,
+		NamePrefix: p.Name,
+	}
+	return values
 }

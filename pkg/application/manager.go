@@ -13,7 +13,6 @@ import (
 	"tacokumo/portal-controller-kubernetes/pkg/requeue"
 
 	"go.yaml.in/yaml/v2"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/go-git/go-billy/v6/memfs"
 	"github.com/go-git/go-git/v6"
@@ -57,6 +56,10 @@ func (m *Manager) Reconcile(
 		if err := m.reconcileOnWaitingState(ctx, app); err != nil {
 			return m.handleError(ctx, app, err)
 		}
+	case tacokumoiov1alpha1.ApplicationStateRunning:
+		// TODO: 差分を検知したらProvisioningに戻す
+	case tacokumoiov1alpha1.ApplicationStateError:
+		// TODO: 差分を検知したらProvisioningに戻す
 	default:
 		app.Status.State = tacokumoiov1alpha1.ApplicationStateProvisioning
 	}
@@ -113,7 +116,7 @@ func (m *Manager) reconcileOnProvisioningState(
 
 	for _, obj := range objects {
 		obj.SetNamespace(app.Namespace)
-		if err := createOrUpdateObject(ctx, m.k8sClient, obj); err != nil {
+		if err := helmutil.CreateOrUpdateObject(ctx, m.k8sClient, obj); err != nil {
 			return err
 		}
 	}
@@ -220,23 +223,4 @@ func (m *Manager) constructValues(
 		},
 	}
 	return values
-}
-
-func createOrUpdateObject(ctx context.Context, k8sClient client.Client, obj *unstructured.Unstructured) error {
-	existingObj := &unstructured.Unstructured{}
-	existingObj.SetGroupVersionKind(obj.GroupVersionKind())
-	err := k8sClient.Get(ctx, client.ObjectKey{
-		Namespace: obj.GetNamespace(),
-		Name:      obj.GetName(),
-	}, existingObj)
-	if err != nil {
-		if client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		// Not found, create
-		return k8sClient.Create(ctx, obj)
-	}
-	// Found, update
-	obj.SetResourceVersion(existingObj.GetResourceVersion())
-	return k8sClient.Update(ctx, obj)
 }

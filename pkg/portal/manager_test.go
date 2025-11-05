@@ -8,6 +8,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,6 +31,7 @@ func TestManager_reconcileOnProvisioningState(t *testing.T) {
 			expectedState: tacokumoiov1alpha1.PortalStateWaiting,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
@@ -50,6 +52,10 @@ func TestManager_reconcileOnProvisioningState(t *testing.T) {
 
 			ns := corev1.Namespace{}
 			err = k8sClient.Get(t.Context(), types.NamespacedName{Name: tt.p.Name}, &ns)
+			assert.NoError(t, err)
+
+			dep := appsv1.Deployment{}
+			err = k8sClient.Get(t.Context(), types.NamespacedName{Namespace: tt.p.Name, Name: tt.p.Name + "-portal-ui"}, &dep)
 			assert.NoError(t, err)
 		})
 	}
