@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: portals.tacokumo.io.tacokumo.io
+  name: applications.tacokumo.io
 spec:
-  group: tacokumo.io.tacokumo.io
+  group: tacokumo.io
   names:
-    kind: Portal
-    listKind: PortalList
-    plural: portals
-    singular: portal
-  scope: Cluster
+    kind: Application
+    listKind: ApplicationList
+    plural: applications
+    singular: application
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Portal is the Schema for the portals API
+        description: Application is the Schema for the applications API
         properties:
           apiVersion:
             description: |-
@@ -37,22 +37,29 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec defines the desired state of Portal
+            description: spec defines the desired state of Application
+            properties:
+              appConfigPath:
+                type: string
+              repo:
+                properties:
+                  ref:
+                    type: string
+                  url:
+                    type: string
+                required:
+                - ref
+                - url
+                type: object
+            required:
+            - repo
             type: object
           status:
-            description: status defines the observed state of Portal
+            description: status defines the observed state of Application
             properties:
               conditions:
-                description: |-
-                  conditions represent the current state of the Portal resource.
-                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
-
-                  Standard condition types include:
-                  - "Available": the resource is fully functional
-                  - "Progressing": the resource is being created or updated
-                  - "Degraded": the resource failed to reach or maintain its desired state
-
-                  The status of each condition is one of True, False, or Unknown.
+                description: The status of each condition is one of True, False, or
+                  Unknown.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -111,6 +118,36 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              deployments:
+                items:
+                  description: |-
+                    NamespacedName はKubernetesリソースのNamespaceとNameを表します
+                    これは types.NamespacedName でJSONタグが定義されていないために使われます。
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                  required:
+                  - name
+                  - namespace
+                  type: object
+                type: array
+              pods:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    ready:
+                      type: boolean
+                  required:
+                  - name
+                  - namespace
+                  - ready
+                  type: object
+                type: array
               state:
                 type: string
             type: object

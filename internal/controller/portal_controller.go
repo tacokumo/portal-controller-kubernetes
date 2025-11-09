@@ -40,9 +40,9 @@ type PortalReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=tacokumo.io.tacokumo.io,resources=portals,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=tacokumo.io.tacokumo.io,resources=portals/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=tacokumo.io.tacokumo.io,resources=portals/finalizers,verbs=update
+// +kubebuilder:rbac:groups=tacokumo.io,resources=portals,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=tacokumo.io,resources=portals/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=tacokumo.io,resources=portals/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

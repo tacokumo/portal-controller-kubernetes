@@ -1,4 +1,4 @@
-apiVersion: tacokumo.io.tacokumo.io/v1alpha1
+apiVersion: tacokumo.io/v1alpha1
 kind: Portal
 metadata:
   labels:
