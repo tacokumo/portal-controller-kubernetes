@@ -8,10 +8,11 @@ COPY go.sum go.sum
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
 
-# Copy the Go source (relies on .dockerignore to filter)
-COPY . .
+COPY ./api ./api
+COPY ./cmd ./cmd
+COPY ./internal ./internal
+COPY ./pkg ./pkg
 
-# Build
 RUN CGO_ENABLED=0 go build -a -o manager cmd/main.go
 
 # Use distroless as minimal base image to package the manager binary
@@ -19,6 +20,8 @@ RUN CGO_ENABLED=0 go build -a -o manager cmd/main.go
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
+COPY ./charts ./charts
+
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]
