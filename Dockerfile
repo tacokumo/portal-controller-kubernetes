@@ -1,9 +1,12 @@
+# syntax=docker/dockerfile:1.6
+
 # Build the manager binary
-FROM golang:1.25 AS builder
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+FROM --platform=$BUILDPLATFORM golang:1.25 AS builder
 
 # Build argumentsを定義
 ARG TARGETPLATFORM
-ARG BUILDPLATFORM
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -21,7 +24,7 @@ COPY . .
 # was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
 # the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
-RUN case ${TARGETPLATFORM} in \
+RUN case "${TARGETPLATFORM:-linux/amd64}" in \
         "linux/amd64")  export GOOS=linux GOARCH=amd64 ;; \
         "linux/arm64")  export GOOS=linux GOARCH=arm64 ;; \
         "linux/arm/v7") export GOOS=linux GOARCH=arm GOARM=7 ;; \
