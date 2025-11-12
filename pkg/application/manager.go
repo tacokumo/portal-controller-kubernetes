@@ -8,7 +8,6 @@ import (
 	tacokumoapplication "tacokumo/portal-controller-kubernetes/charts/tacokumo-application"
 	"tacokumo/portal-controller-kubernetes/pkg/appconfig"
 	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
-	"tacokumo/portal-controller-kubernetes/pkg/requeue"
 
 	"go.yaml.in/yaml/v2"
 
@@ -78,9 +77,6 @@ func (m *Manager) handleError(
 	// errorだとしても､Statusの更新は必要
 	if updateErr := m.k8sClient.Status().Update(ctx, app); updateErr != nil {
 		return updateErr
-	}
-	if requeue.IsRequeueError(err) {
-		return nil
 	}
 	return err
 }
@@ -166,7 +162,8 @@ func (m *Manager) reconcileOnWaitingState(
 	}
 
 	if !allReady {
-		return requeue.NewError("some pods are not ready yet")
+		// pods are not ready yet, but the controller will requeue automatically
+		return nil
 	}
 
 	// TODO: healthcheckを実行もしくは監視し、成功していることを確認する

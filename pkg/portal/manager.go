@@ -7,7 +7,6 @@ import (
 	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
 	tacokumoportal "tacokumo/portal-controller-kubernetes/charts/tacokumo-portal"
 	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
-	"tacokumo/portal-controller-kubernetes/pkg/requeue"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -82,8 +81,8 @@ func (m *Manager) reconcileOnProvisioningState(
 	}
 
 	if err := m.k8sClient.Get(ctx, types.NamespacedName{Name: p.Name}, &ns); err != nil {
-		// 作成されるまで待つ
-		return requeue.NewError("waiting for Namespace to be created")
+		// 作成されるまで待つ、コントローラーが自動的に再キューイングする
+		return nil
 	}
 
 	values := m.constructValues(p)
@@ -135,7 +134,8 @@ func (m *Manager) reconcileOnWaitingState(
 	}
 
 	if !allReady {
-		return requeue.NewError("some pods are not ready yet")
+		// pods are not ready yet, but the controller will requeue automatically
+		return nil
 	}
 
 	// TODO: healthcheckを実行もしくは監視し、成功していることを確認する
@@ -153,9 +153,6 @@ func (m *Manager) handleError(
 	// errorだとしても､Statusの更新は必要
 	if updateErr := m.k8sClient.Status().Update(ctx, p); updateErr != nil {
 		return updateErr
-	}
-	if requeue.IsRequeueError(err) {
-		return nil
 	}
 	return err
 }

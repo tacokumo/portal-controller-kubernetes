@@ -20,7 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/cockroachdb/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,7 +28,6 @@ import (
 
 	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
 	"tacokumo/portal-controller-kubernetes/pkg/application"
-	"tacokumo/portal-controller-kubernetes/pkg/requeue"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -71,13 +69,9 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	manager := application.NewManager(logger, r.Client, ".")
 
 	if err := manager.Reconcile(ctx, &app); err != nil {
-		if errors.As(err, &requeue.Error{}) {
-			logger.Info("requeuing due to requeue error", "reason", err.Error())
-			return ctrl.Result{RequeueAfter: time.Second * 2}, nil
-		}
-
+		// TODO: いつもrequeueするべきかどうかを考える
 		logger.Error(err, "failed to reconcile with manager")
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: time.Second * 2}, nil
 	}
 
 	return ctrl.Result{RequeueAfter: time.Second * 2}, nil
