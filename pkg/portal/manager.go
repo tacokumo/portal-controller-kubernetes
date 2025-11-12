@@ -4,8 +4,6 @@ import (
 	"context"
 	"path/filepath"
 
-	"github.com/cockroachdb/errors"
-
 	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
 	tacokumoportal "tacokumo/portal-controller-kubernetes/charts/tacokumo-portal"
 	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
@@ -156,7 +154,7 @@ func (m *Manager) handleError(
 	if updateErr := m.k8sClient.Status().Update(ctx, p); updateErr != nil {
 		return updateErr
 	}
-	if errors.As(err, &requeue.Error{}) {
+	if requeue.IsRequeueError(err) {
 		return nil
 	}
 	return err
