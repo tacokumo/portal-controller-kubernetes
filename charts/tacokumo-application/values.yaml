@@ -8,3 +8,4 @@ main:
     tacokumo.io/managed-by: "portal-controller"
   podAnnotations:
     tacokumo.io/managed-by: "portal-controller"
+  envFrom: []

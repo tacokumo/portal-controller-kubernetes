@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
-	tacokumoapplication "tacokumo/portal-controller-kubernetes/charts/tacokumo-application"
 	"tacokumo/portal-controller-kubernetes/pkg/appconfig"
 	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
 
@@ -90,14 +89,9 @@ func (m *Manager) reconcileOnProvisioningState(
 		return err
 	}
 
-	values := m.constructValues(repo, app)
-
 	chartPath := filepath.Join(m.workdir, "charts", "tacokumo-application")
 
-	valueMap, err := helmutil.StructToValueMap(values)
-	if err != nil {
-		return err
-	}
+	valueMap := m.constructValueMap(repo, app)
 	manifests, err := helmutil.RenderChart(chartPath, app.Name, app.Namespace, valueMap)
 	if err != nil {
 		return err
@@ -206,16 +200,36 @@ func (m *Manager) cloneApplicationRepository(
 	}, nil
 }
 
-func (m *Manager) constructValues(
+func (m *Manager) constructValueMap(
 	repo appconfig.Repository,
-	_ *tacokumoiov1alpha1.Application,
-) tacokumoapplication.Values {
-	values := tacokumoapplication.Values{
-		Main: tacokumoapplication.MainApplicationValues{
-			ApplicationName: repo.AppConfig.AppName,
-			ReplicaCount:    1,
-			Image:           repo.AppConfig.Build.Image,
+	app *tacokumoiov1alpha1.Application,
+) map[string]any {
+	mainValues := map[string]any{
+		"applicationName":  repo.AppConfig.AppName,
+		"replicaCount":     1,
+		"image":            repo.AppConfig.Build.Image,
+		"imagePullPolicy":  "IfNotPresent",
+		"imagePullSecrets": []any{},
+		"annotations": map[string]any{
+			"tacokumo.io/managed-by": "portal-controller",
 		},
+		"podAnnotations": map[string]any{
+			"tacokumo.io/managed-by": "portal-controller",
+		},
+		"envFrom": []any{},
 	}
-	return values
+
+	if app.Spec.EnvSecretName != nil {
+		mainValues["envFrom"] = []any{
+			map[string]any{
+				"secretRef": map[string]any{
+					"name": *app.Spec.EnvSecretName,
+				},
+			},
+		}
+	}
+
+	return map[string]any{
+		"main": mainValues,
+	}
 }

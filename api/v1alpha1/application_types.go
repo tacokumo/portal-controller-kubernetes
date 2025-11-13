@@ -27,6 +27,9 @@ import (
 type ApplicationSpec struct {
 	Repo          RepositoryRef `json:"repo"`
 	AppConfigPath string        `json:"appConfigPath,omitempty"`
+	// APIでアプリケーションに対し環境変数をセットされたときに、
+	// それが格納されたSecretが存在する仮定する
+	EnvSecretName *string `json:"envSecretName,omitempty"`
 }
 
 type RepositoryRef struct {

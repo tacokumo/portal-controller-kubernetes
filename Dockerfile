@@ -12,7 +12,6 @@ COPY ./api ./api
 COPY ./cmd ./cmd
 COPY ./internal ./internal
 COPY ./pkg ./pkg
-COPY ./charts ./charts
 
 RUN CGO_ENABLED=0 go build -a -o manager cmd/main.go
 

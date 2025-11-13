@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
-	tacokumoportal "tacokumo/portal-controller-kubernetes/charts/tacokumo-portal"
 	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
 
 	"github.com/go-logr/logr"
@@ -89,11 +88,7 @@ func (m *Manager) reconcileOnProvisioningState(
 
 	chartPath := filepath.Join(m.workdir, "charts", "tacokumo-portal")
 
-	valueMap, err := helmutil.StructToValueMap(values)
-	if err != nil {
-		return err
-	}
-	manifests, err := helmutil.RenderChart(chartPath, p.Name, p.Name, valueMap)
+	manifests, err := helmutil.RenderChart(chartPath, p.Name, p.Name, values)
 	if err != nil {
 		return err
 	}
@@ -159,10 +154,10 @@ func (m *Manager) handleError(
 
 func (m *Manager) constructValues(
 	p *tacokumoiov1alpha1.Portal,
-) tacokumoportal.Values {
-	values := tacokumoportal.Values{
-		Namespace:  p.Name,
-		NamePrefix: p.Name,
+) map[string]any {
+	values := map[string]any{
+		"namespace":  p.Name,
+		"namePrefix": p.Name,
 	}
 	return values
 }

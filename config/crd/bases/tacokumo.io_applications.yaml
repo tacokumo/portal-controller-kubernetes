@@ -41,6 +41,11 @@ spec:
             properties:
               appConfigPath:
                 type: string
+              envSecretName:
+                description: |-
+                  APIでアプリケーションに対し環境変数をセットされたときに、
+                  それが格納されたSecretが存在する仮定する
+                type: string
               repo:
                 properties:
                   ref:
