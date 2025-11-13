@@ -47,7 +47,7 @@ func TestManager_reconcileOnProvisioningState(t *testing.T) {
 						return err
 					}
 
-					if dep.Spec.Template.Spec.Containers[0].Image != "ghcr.io/tacokumo/tacokumo-bot:main-647d918" {
+					if dep.Spec.Template.Spec.Containers[0].Image != "ghcr.io/tacokumo/tacokumo-bot:main" {
 						return fmt.Errorf("unexpected image: %s", dep.Spec.Template.Spec.Containers[0].Image)
 					}
 
@@ -140,5 +140,5 @@ func TestManager_cloneApplicationRepository(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "basic", repo.AppConfig.AppName)
-	assert.Equal(t, "ghcr.io/tacokumo/tacokumo-bot:main-647d918", repo.AppConfig.Build.Image)
+	assert.Equal(t, "ghcr.io/tacokumo/tacokumo-bot:main", repo.AppConfig.Build.Image)
 }
