@@ -4,8 +4,8 @@ import (
 	"context"
 	"path/filepath"
 
-	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
-	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
+	tacokumoiov1alpha1 "github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1"
+	"github.com/tacokumo/portal-controller-kubernetes/pkg/helmutil"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"

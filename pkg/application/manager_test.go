@@ -2,8 +2,9 @@ package application
 
 import (
 	"fmt"
-	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
 	"testing"
+
+	tacokumoiov1alpha1 "github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1"
 
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"

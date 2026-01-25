@@ -1,8 +1,9 @@
 package portal
 
 import (
-	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
 	"testing"
+
+	tacokumoiov1alpha1 "github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"

@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
+	tacokumoiov1alpha1 "github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1"
 )
 
 var _ = Describe("Application Controller", func() {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"path/filepath"
 
-	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
-	"tacokumo/portal-controller-kubernetes/pkg/appconfig"
-	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
+	tacokumoiov1alpha1 "github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1"
+	"github.com/tacokumo/portal-controller-kubernetes/pkg/appconfig"
+	"github.com/tacokumo/portal-controller-kubernetes/pkg/helmutil"
 
 	"go.yaml.in/yaml/v2"
 

@@ -26,8 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
-	"tacokumo/portal-controller-kubernetes/pkg/application"
+	tacokumoiov1alpha1 "github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1"
+	"github.com/tacokumo/portal-controller-kubernetes/pkg/application"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )

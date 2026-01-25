@@ -35,8 +35,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
-	"tacokumo/portal-controller-kubernetes/internal/controller"
+	tacokumoiov1alpha1 "github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1"
+	"github.com/tacokumo/portal-controller-kubernetes/internal/controller"
 	// +kubebuilder:scaffold:imports
 )
 

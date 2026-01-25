@@ -30,7 +30,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"tacokumo/portal-controller-kubernetes/test/utils"
+	"github.com/tacokumo/portal-controller-kubernetes/test/utils"
 )
 
 // namespace where the project is deployed in

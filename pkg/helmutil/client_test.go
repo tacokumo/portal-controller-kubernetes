@@ -1,8 +1,9 @@
 package helmutil_test
 
 import (
-	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
 	"testing"
+
+	"github.com/tacokumo/portal-controller-kubernetes/pkg/helmutil"
 
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
