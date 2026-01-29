@@ -1,6 +1,6 @@
 package helmutil
 
-import "go.yaml.in/yaml/v2"
+import "go.yaml.in/yaml/v3"
 
 func StructToValueMap(i any) (map[string]interface{}, error) {
 	data, err := yaml.Marshal(i)

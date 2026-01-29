@@ -1,9 +1,9 @@
-apiVersion: tacokumo.io/v1alpha1
-kind: Portal
+apiVersion: tacokumo.github.io/v1alpha1
+kind: Application
 metadata:
   labels:
     app.kubernetes.io/name: portal-controller-kubernetes
     app.kubernetes.io/managed-by: kustomize
-  name: portal-sample
+  name: application-sample
 spec:
   # TODO(user): Add fields here

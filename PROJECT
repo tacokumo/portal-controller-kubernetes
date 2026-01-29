@@ -3,25 +3,33 @@
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
 cliVersion: 4.9.0
-domain: tacokumo.io
+domain: tacokumo.github.io
 layout:
 - go.kubebuilder.io/v4
 projectName: portal-controller-kubernetes
-repo: tacokumo/portal-controller-kubernetes
+repo: github.com/tacokumo/portal-controller-kubernetes
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: tacokumo.io
+  domain: tacokumo.github.io
   kind: Application
-  path: tacokumo/portal-controller-kubernetes/api/v1alpha1
+  path: github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
-  domain: tacokumo.io
+  domain: tacokumo.github.io
   kind: Portal
-  path: tacokumo/portal-controller-kubernetes/api/v1alpha1
+  path: github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: tacokumo.github.io
+  kind: Release
+  path: github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1
   version: v1alpha1
 version: "3"

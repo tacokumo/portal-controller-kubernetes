@@ -4,8 +4,8 @@ import (
 	"context"
 	"path/filepath"
 
-	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
-	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
+	tacokumogithubiov1alpha1 "github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1"
+	"github.com/tacokumo/portal-controller-kubernetes/pkg/helmutil"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,24 +35,24 @@ func NewManager(
 
 func (m *Manager) Reconcile(
 	ctx context.Context,
-	p *tacokumoiov1alpha1.Portal,
+	p *tacokumogithubiov1alpha1.Portal,
 ) error {
 
 	switch p.Status.State {
-	case tacokumoiov1alpha1.PortalStateProvisioning:
+	case tacokumogithubiov1alpha1.PortalStateProvisioning:
 		if err := m.reconcileOnProvisioningState(ctx, p); err != nil {
 			return m.handleError(ctx, p, err)
 		}
-	case tacokumoiov1alpha1.PortalStateWaiting:
+	case tacokumogithubiov1alpha1.PortalStateWaiting:
 		if err := m.reconcileOnWaitingState(ctx, p); err != nil {
 			return m.handleError(ctx, p, err)
 		}
-	case tacokumoiov1alpha1.PortalStateRunning:
+	case tacokumogithubiov1alpha1.PortalStateRunning:
 		// TODO: 差分を検知したらProvisioningに戻す
-	case tacokumoiov1alpha1.PortalStateError:
+	case tacokumogithubiov1alpha1.PortalStateError:
 		// TODO: 差分を検知したらProvisioningに戻す
 	default:
-		p.Status.State = tacokumoiov1alpha1.PortalStateProvisioning
+		p.Status.State = tacokumogithubiov1alpha1.PortalStateProvisioning
 	}
 
 	if err := m.k8sClient.Status().Update(ctx, p); err != nil {
@@ -63,7 +63,7 @@ func (m *Manager) Reconcile(
 
 func (m *Manager) reconcileOnProvisioningState(
 	ctx context.Context,
-	p *tacokumoiov1alpha1.Portal,
+	p *tacokumogithubiov1alpha1.Portal,
 ) error {
 	ns := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -86,7 +86,7 @@ func (m *Manager) reconcileOnProvisioningState(
 
 	values := m.constructValues(p)
 
-	chartPath := filepath.Join(m.workdir, "charts", "tacokumo-portal")
+	chartPath := filepath.Join(m.workdir, "helm-charts", "charts", "tacokumo-portal")
 
 	manifests, err := helmutil.RenderChart(chartPath, p.Name, p.Name, values)
 	if err != nil {
@@ -105,17 +105,17 @@ func (m *Manager) reconcileOnProvisioningState(
 		}
 	}
 
-	p.Status.State = tacokumoiov1alpha1.PortalStateWaiting
+	p.Status.State = tacokumogithubiov1alpha1.PortalStateWaiting
 	return nil
 }
 
 func (m *Manager) reconcileOnWaitingState(
 	ctx context.Context,
-	p *tacokumoiov1alpha1.Portal,
+	p *tacokumogithubiov1alpha1.Portal,
 ) error {
 	podList := corev1.PodList{}
 	err := m.k8sClient.List(ctx, &podList, client.InNamespace(p.Name), client.MatchingLabels{
-		tacokumoiov1alpha1.ManagedByLabelKey: "portal-controller",
+		tacokumogithubiov1alpha1.ManagedByLabelKey: "portal-controller",
 	})
 	if err != nil {
 		return err
@@ -134,17 +134,17 @@ func (m *Manager) reconcileOnWaitingState(
 	}
 
 	// TODO: healthcheckを実行もしくは監視し、成功していることを確認する
-	p.Status.State = tacokumoiov1alpha1.PortalStateRunning
+	p.Status.State = tacokumogithubiov1alpha1.PortalStateRunning
 	return nil
 }
 
 func (m *Manager) handleError(
 	ctx context.Context,
-	p *tacokumoiov1alpha1.Portal,
+	p *tacokumogithubiov1alpha1.Portal,
 	err error,
 ) error {
 	// 引数のerrorは必ずnilではない
-	p.Status.State = tacokumoiov1alpha1.PortalStateError
+	p.Status.State = tacokumogithubiov1alpha1.PortalStateError
 	// errorだとしても､Statusの更新は必要
 	if updateErr := m.k8sClient.Status().Update(ctx, p); updateErr != nil {
 		return updateErr
@@ -153,7 +153,7 @@ func (m *Manager) handleError(
 }
 
 func (m *Manager) constructValues(
-	p *tacokumoiov1alpha1.Portal,
+	p *tacokumogithubiov1alpha1.Portal,
 ) map[string]any {
 	values := map[string]any{
 		"namespace":  p.Name,

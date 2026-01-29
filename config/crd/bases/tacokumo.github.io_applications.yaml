@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: applications.tacokumo.io
+  name: applications.tacokumo.github.io
 spec:
-  group: tacokumo.io
+  group: tacokumo.github.io
   names:
     kind: Application
     listKind: ApplicationList
@@ -39,25 +39,37 @@ spec:
           spec:
             description: spec defines the desired state of Application
             properties:
-              appConfigPath:
-                type: string
-              envSecretName:
-                description: |-
-                  APIでアプリケーションに対し環境変数をセットされたときに、
-                  それが格納されたSecretが存在する仮定する
-                type: string
-              repo:
+              releaseTemplate:
+                description: ReleaseTemplate は 各Stageに対応するReleaseのテンプレートを示します
                 properties:
-                  ref:
+                  appConfigBranch:
+                    description: |-
+                      AppConfigBranch はappconfigが格納されているGitブランチを示します
+                      何も指定されない場合はmainが使用されます
                     type: string
-                  url:
+                  appConfigPath:
+                    description: AppConfigPath はappconfig.yamlが格納されているパスを示します
                     type: string
+                  commit:
+                    description: Commit はReleaseに使用するGitコミットハッシュを示します
+                    type: string
+                  envSecretName:
+                    description: |-
+                      APIでアプリケーションに対し環境変数をセットされたときに、
+                      それが格納されたSecretが存在する仮定する
+                    type: string
+                  repo:
+                    description: Repo はappconfigが格納されているGitリポジトリを示します
+                    properties:
+                      url:
+                        description: URL はGitリポジトリのURLを示します
+                        type: string
+                    required:
+                    - url
+                    type: object
                 required:
-                - ref
-                - url
+                - repo
                 type: object
-            required:
-            - repo
             type: object
           status:
             description: status defines the observed state of Application
@@ -123,35 +135,51 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              deployments:
+              releases:
                 items:
-                  description: |-
-                    NamespacedName はKubernetesリソースのNamespaceとNameを表します
-                    これは types.NamespacedName でJSONタグが定義されていないために使われます。
+                  description: ObjectReference contains enough information to let
+                    you inspect or modify the referred object.
                   properties:
+                    apiVersion:
+                      description: API version of the referent.
+                      type: string
+                    fieldPath:
+                      description: |-
+                        If referring to a piece of an object instead of an entire object, this string
+                        should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                        For example, if the object reference is to a container within a pod, this would take on a value like:
+                        "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                        the event) or if no container name is specified "spec.containers[2]" (container with
+                        index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                        referencing a part of an object.
+                      type: string
+                    kind:
+                      description: |-
+                        Kind of the referent.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                      type: string
                     name:
+                      description: |-
+                        Name of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                       type: string
                     namespace:
+                      description: |-
+                        Namespace of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                       type: string
-                  required:
-                  - name
-                  - namespace
+                    resourceVersion:
+                      description: |-
+                        Specific resourceVersion to which this reference is made, if any.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                      type: string
+                    uid:
+                      description: |-
+                        UID of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                      type: string
                   type: object
-                type: array
-              pods:
-                items:
-                  properties:
-                    name:
-                      type: string
-                    namespace:
-                      type: string
-                    ready:
-                      type: boolean
-                  required:
-                  - name
-                  - namespace
-                  - ready
-                  type: object
+                  x-kubernetes-map-type: atomic
                 type: array
               state:
                 type: string

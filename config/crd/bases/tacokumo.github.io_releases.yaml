@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: portals.tacokumo.io
+  name: releases.tacokumo.github.io
 spec:
-  group: tacokumo.io
+  group: tacokumo.github.io
   names:
-    kind: Portal
-    listKind: PortalList
-    plural: portals
-    singular: portal
-  scope: Cluster
+    kind: Release
+    listKind: ReleaseList
+    plural: releases
+    singular: release
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Portal is the Schema for the portals API
+        description: Release is the Schema for the releases API
         properties:
           apiVersion:
             description: |-
@@ -37,22 +37,42 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec defines the desired state of Portal
+            description: spec defines the desired state of Release
+            properties:
+              appConfigBranch:
+                description: |-
+                  AppConfigBranch はappconfigが格納されているGitブランチを示します
+                  何も指定されない場合はmainが使用されます
+                type: string
+              appConfigPath:
+                description: AppConfigPath はappconfig.yamlが格納されているパスを示します
+                type: string
+              commit:
+                description: Commit はReleaseに使用するGitコミットハッシュを示します
+                type: string
+              envSecretName:
+                description: |-
+                  APIでアプリケーションに対し環境変数をセットされたときに、
+                  それが格納されたSecretが存在する仮定する
+                type: string
+              repo:
+                description: Repo はappconfigが格納されているGitリポジトリを示します
+                properties:
+                  url:
+                    description: URL はGitリポジトリのURLを示します
+                    type: string
+                required:
+                - url
+                type: object
+            required:
+            - repo
             type: object
           status:
-            description: status defines the observed state of Portal
+            description: status defines the observed state of Release
             properties:
               conditions:
-                description: |-
-                  conditions represent the current state of the Portal resource.
-                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
-
-                  Standard condition types include:
-                  - "Available": the resource is fully functional
-                  - "Progressing": the resource is being created or updated
-                  - "Degraded": the resource failed to reach or maintain its desired state
-
-                  The status of each condition is one of True, False, or Unknown.
+                description: The status of each condition is one of True, False, or
+                  Unknown.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.

@@ -1,0 +1,11 @@
+stages:
+  - name: staging
+    policy:
+      type: branch
+      branch:
+        name: staging
+  - name: production
+    policy:
+      type: branch
+      branch:
+        name: main

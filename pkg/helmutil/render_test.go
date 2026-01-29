@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testChartPath = "testdata/test-chart"
+
 // TestRenderChartは、RenderChart関数が正常に動作することを確認します。
 // チャートの内容は頻繁に変更されるため、レンダリングされたマニフェストの具体的な内容はテストしません。
 // エラーが発生せず、何かしらのマニフェストが生成されることのみを確認します。
@@ -21,7 +23,7 @@ func TestRenderChart(t *testing.T) {
 	}{
 		{
 			name:        "render with default values",
-			chartPath:   "../../charts/tacokumo-application",
+			chartPath:   testChartPath,
 			releaseName: "test-release",
 			namespace:   "default",
 			values:      nil,
@@ -29,7 +31,7 @@ func TestRenderChart(t *testing.T) {
 		},
 		{
 			name:        "render with custom values",
-			chartPath:   "../../charts/tacokumo-application",
+			chartPath:   testChartPath,
 			releaseName: "custom-release",
 			namespace:   "test-namespace",
 			values: map[string]interface{}{
@@ -47,7 +49,7 @@ func TestRenderChart(t *testing.T) {
 		},
 		{
 			name:        "render with imagePullSecrets",
-			chartPath:   "../../charts/tacokumo-application",
+			chartPath:   testChartPath,
 			releaseName: "secret-release",
 			namespace:   "default",
 			values: map[string]interface{}{
@@ -95,7 +97,7 @@ func TestRenderChart(t *testing.T) {
 // これにより、Helmのレンダリング結果が有効なKubernetesマニフェストであることを保証します。
 func TestRenderChart_ParseableOutput(t *testing.T) {
 	manifest, err := RenderChart(
-		"../../charts/tacokumo-application",
+		testChartPath,
 		"parse-test",
 		"default",
 		nil,

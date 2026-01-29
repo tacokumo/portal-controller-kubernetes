@@ -52,7 +52,7 @@ func TestStructToValueMap_NestedStruct(t *testing.T) {
 
 	assert.Equal(t, 1, result["id"])
 
-	inner, ok := result["inner"].(map[interface{}]interface{})
+	inner, ok := result["inner"].(map[string]interface{})
 	require.True(t, ok, "inner should be a map")
 	assert.Equal(t, "nested", inner["name"])
 	assert.Equal(t, 100, inner["value"])
@@ -82,12 +82,12 @@ func TestStructToValueMap_MapField(t *testing.T) {
 
 	assert.Equal(t, "test", result["name"])
 
-	labels, ok := result["labels"].(map[interface{}]interface{})
+	labels, ok := result["labels"].(map[string]interface{})
 	require.True(t, ok, "labels should be a map")
 	assert.Equal(t, "prod", labels["env"])
 	assert.Equal(t, "platform", labels["team"])
 
-	attributes, ok := result["attributes"].(map[interface{}]interface{})
+	attributes, ok := result["attributes"].(map[string]interface{})
 	require.True(t, ok, "attributes should be a map")
 	assert.Equal(t, 3, attributes["replicas"])
 	assert.Equal(t, 30, attributes["timeout"])
@@ -154,7 +154,7 @@ func TestStructToValueMap_SliceOfStructs(t *testing.T) {
 	require.True(t, ok, "items should be a slice")
 	assert.Len(t, items, 3)
 
-	firstItem, ok := items[0].(map[interface{}]interface{})
+	firstItem, ok := items[0].(map[string]interface{})
 	require.True(t, ok, "first item should be a map")
 	assert.Equal(t, "first", firstItem["key"])
 	assert.Equal(t, 1, firstItem["value"])
@@ -215,17 +215,17 @@ func TestStructToValueMap_ComplexNested(t *testing.T) {
 	require.True(t, ok, "containers should be a slice")
 	assert.Len(t, containers, 1)
 
-	container, ok := containers[0].(map[interface{}]interface{})
+	container, ok := containers[0].(map[string]interface{})
 	require.True(t, ok, "container should be a map")
 	assert.Equal(t, "app", container["name"])
 	assert.Equal(t, "my-app:latest", container["image"])
 
-	resources, ok := container["resources"].(map[interface{}]interface{})
+	resources, ok := container["resources"].(map[string]interface{})
 	require.True(t, ok, "resources should be a map")
 	assert.Equal(t, "100m", resources["cpu"])
 	assert.Equal(t, "128Mi", resources["memory"])
 
-	env, ok := container["env"].(map[interface{}]interface{})
+	env, ok := container["env"].(map[string]interface{})
 	require.True(t, ok, "env should be a map")
 	assert.Equal(t, "info", env["LOG_LEVEL"])
 

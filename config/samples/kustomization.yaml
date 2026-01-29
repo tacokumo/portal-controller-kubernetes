@@ -1,5 +1,6 @@
 ## Append samples of your project ##
 resources:
-- tacokumo.io_v1alpha1_application.yaml
-- tacokumo.io_v1alpha1_portal.yaml
+- tacokumo.github.io_v1alpha1_application.yaml
+- tacokumo.github.io_v1alpha1_portal.yaml
+- v1alpha1_release.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

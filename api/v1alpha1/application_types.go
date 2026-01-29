@@ -1,40 +1,44 @@
 /*
-Copyright 2025 drumato.
+MIT License
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+Copyright (c) 2025 tacokumo
 
-    http://www.apache.org/licenses/LICENSE-2.0
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 */
 
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // ApplicationSpec defines the desired state of Application
 type ApplicationSpec struct {
-	Repo          RepositoryRef `json:"repo"`
-	AppConfigPath string        `json:"appConfigPath,omitempty"`
-	// APIでアプリケーションに対し環境変数をセットされたときに、
-	// それが格納されたSecretが存在する仮定する
-	EnvSecretName *string `json:"envSecretName,omitempty"`
+	// ReleaseTemplate は 各Stageに対応するReleaseのテンプレートを示します
+	ReleaseTemplate ReleaseSpec `json:"releaseTemplate,omitempty"`
 }
 
+// RepositoryRef defines a reference to a Git repository.
 type RepositoryRef struct {
+	// URL はGitリポジトリのURLを示します
 	URL string `json:"url"`
-	Ref string `json:"ref"`
 }
 
 // ApplicationStatus defines the observed state of Application.
@@ -45,23 +49,20 @@ type ApplicationStatus struct {
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	Deployments []NamespacedName `json:"deployments,omitempty"`
-	Pods        []PodReference   `json:"pods,omitempty"`
-	State       string           `json:"state,omitempty"`
+	Releases []corev1.ObjectReference `json:"releases,omitempty"`
+	State    string                   `json:"state,omitempty"`
 }
 
 const (
 	// ApplicationStateProvisioning は差分検知などによって遷移し､
-	// 現在の定義によってアプリケーション状態の収束を再度キックすることを示します
+	// appconfigなどを読み込んでReleaseを作成している途中であることを示します
 	ApplicationStateProvisioning = "Provisioning"
-	// ApplicationStateWaiting はアプリケーションの稼働準備中であることを示します
-	// このStateではすべてのアプリケーションがReadyになっていること、
-	// Appconfigのhealthcheckが成功することを期待します
+	// ApplicationStateWaiting はそれぞれのRelease状態が収束するのを待っていることを示します
 	ApplicationStateWaiting = "Waiting"
-	// ApplicationStateRunning はアプリケーションが正常に稼働していることを示します
+	// ApplicationStateRunning はすべてのReleaseが正常に稼働していることを示します
 	ApplicationStateRunning = "Running"
-	// ApplicationStateError はアプリケーションの稼働に問題があることを示します
-	// conditionsに詳細が記録されます
+	// ApplicationStateError は何らかのエラーが発生していることを示します
+	// Conditions に詳細が記載されます
 	ApplicationStateError = "Error"
 )
 

@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.main.applicationName }}
+  labels:
+    app: {{ .Values.main.applicationName }}
+spec:
+  replicas: {{ .Values.main.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.main.applicationName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.main.applicationName }}
+    spec:
+      {{- with .Values.main.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.main.applicationName }}
+          image: "{{ .Values.main.image.repository }}:{{ .Values.main.image.tag }}"
+          imagePullPolicy: {{ .Values.main.image.pullPolicy }}
+          ports:
+            - containerPort: 80

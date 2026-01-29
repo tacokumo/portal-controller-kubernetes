@@ -2,30 +2,32 @@ package application
 
 import (
 	"context"
-	"path/filepath"
+	"fmt"
 
-	tacokumoiov1alpha1 "tacokumo/portal-controller-kubernetes/api/v1alpha1"
-	"tacokumo/portal-controller-kubernetes/pkg/appconfig"
-	"tacokumo/portal-controller-kubernetes/pkg/helmutil"
+	tacokumogithubiov1alpha1 "github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1"
+	"github.com/tacokumo/portal-controller-kubernetes/pkg/appconfig"
+	"github.com/tacokumo/portal-controller-kubernetes/pkg/repoconnector"
 
-	"go.yaml.in/yaml/v2"
+	"go.yaml.in/yaml/v3"
 
-	"github.com/go-git/go-billy/v6/memfs"
-	"github.com/go-git/go-git/v6"
-	"github.com/go-git/go-git/v6/plumbing"
-	"github.com/go-git/go-git/v6/storage/memory"
 	"github.com/go-logr/logr"
 	apispec "github.com/tacokumo/api-spec"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	defaultAppConfigBranch = "main"
 )
 
 type Manager struct {
 	logger    logr.Logger
 	k8sClient client.Client
 	workdir   string
+	connector repoconnector.GitRepositoryConnector
 }
 
 func NewManager(
@@ -36,28 +38,36 @@ func NewManager(
 		logger:    logger,
 		k8sClient: k8sClient,
 		workdir:   workdir,
+		connector: repoconnector.NewDefaultConnector(),
 	}
+}
+
+// WithConnector は Manager に GitRepositoryConnector を設定する
+// テスト用に公開されている
+func (m *Manager) WithConnector(connector repoconnector.GitRepositoryConnector) *Manager {
+	m.connector = connector
+	return m
 }
 
 func (m *Manager) Reconcile(
 	ctx context.Context,
-	app *tacokumoiov1alpha1.Application,
+	app *tacokumogithubiov1alpha1.Application,
 ) error {
 	switch app.Status.State {
-	case tacokumoiov1alpha1.ApplicationStateProvisioning:
+	case tacokumogithubiov1alpha1.ApplicationStateProvisioning:
 		if err := m.reconcileOnProvisioningState(ctx, app); err != nil {
 			return m.handleError(ctx, app, err)
 		}
-	case tacokumoiov1alpha1.ApplicationStateWaiting:
+	case tacokumogithubiov1alpha1.ApplicationStateWaiting:
 		if err := m.reconcileOnWaitingState(ctx, app); err != nil {
 			return m.handleError(ctx, app, err)
 		}
-	case tacokumoiov1alpha1.ApplicationStateRunning:
+	case tacokumogithubiov1alpha1.ApplicationStateRunning:
 		// TODO: 差分を検知したらProvisioningに戻す
-	case tacokumoiov1alpha1.ApplicationStateError:
+	case tacokumogithubiov1alpha1.ApplicationStateError:
 		// TODO: 差分を検知したらProvisioningに戻す
 	default:
-		app.Status.State = tacokumoiov1alpha1.ApplicationStateProvisioning
+		app.Status.State = tacokumogithubiov1alpha1.ApplicationStateProvisioning
 	}
 
 	if err := m.k8sClient.Status().Update(ctx, app); err != nil {
@@ -68,11 +78,11 @@ func (m *Manager) Reconcile(
 
 func (m *Manager) handleError(
 	ctx context.Context,
-	app *tacokumoiov1alpha1.Application,
+	app *tacokumogithubiov1alpha1.Application,
 	err error,
 ) error {
 	// 引数のerrorは必ずnilではない
-	app.Status.State = tacokumoiov1alpha1.ApplicationStateError
+	app.Status.State = tacokumogithubiov1alpha1.ApplicationStateError
 	// errorだとしても､Statusの更新は必要
 	if updateErr := m.k8sClient.Status().Update(ctx, app); updateErr != nil {
 		return updateErr
@@ -82,107 +92,83 @@ func (m *Manager) handleError(
 
 func (m *Manager) reconcileOnProvisioningState(
 	ctx context.Context,
-	app *tacokumoiov1alpha1.Application,
+	app *tacokumogithubiov1alpha1.Application,
 ) (err error) {
 	repo, err := m.cloneApplicationRepository(ctx, app)
 	if err != nil {
 		return err
 	}
 
-	chartPath := filepath.Join(m.workdir, "charts", "tacokumo-application")
-
-	valueMap := m.constructValueMap(repo, app)
-	manifests, err := helmutil.RenderChart(chartPath, app.Name, app.Namespace, valueMap)
-	if err != nil {
-		return err
+	if len(repo.AppConfig.Stages) == 0 {
+		repo.AppConfig.Stages = m.setDefaultStages()
 	}
 
-	objects, err := helmutil.ParseManifestsToUnstructured(manifests)
-	if err != nil {
-		return err
-	}
+	app.Status.Releases = make([]corev1.ObjectReference, 0, len(repo.AppConfig.Stages))
+	for _, stage := range repo.AppConfig.Stages {
+		rel := tacokumogithubiov1alpha1.Release{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: app.Namespace,
+				Name:      fmt.Sprintf("%s-%s", app.Name, stage.Name),
+			},
+		}
 
-	for _, obj := range objects {
-		obj.SetNamespace(app.Namespace)
-		if err := helmutil.CreateOrUpdateObject(ctx, m.k8sClient, obj); err != nil {
+		if _, err := controllerutil.CreateOrUpdate(ctx, m.k8sClient, &rel, func() error {
+			rel.Spec = app.Spec.ReleaseTemplate
+			return nil
+		}); err != nil {
 			return err
 		}
+		app.Status.Releases = append(app.Status.Releases, corev1.ObjectReference{
+			Kind:      rel.Kind,
+			Namespace: rel.Namespace,
+			Name:      rel.Name,
+			UID:       rel.UID,
+		})
 	}
 
-	app.Status.State = tacokumoiov1alpha1.ApplicationStateWaiting
+	app.Status.State = tacokumogithubiov1alpha1.ApplicationStateWaiting
 	return nil
 }
 
 func (m *Manager) reconcileOnWaitingState(
 	ctx context.Context,
-	app *tacokumoiov1alpha1.Application,
+	app *tacokumogithubiov1alpha1.Application,
 ) (err error) {
-	deploymentList := appsv1.DeploymentList{}
-	err = m.k8sClient.List(ctx, &deploymentList, client.InNamespace(app.Namespace), client.MatchingLabels{
-		tacokumoiov1alpha1.ManagedByLabelKey: "portal-controller",
-	})
-	if err != nil {
-		return err
-	}
-
-	for _, deployment := range deploymentList.Items {
-		app.Status.Deployments = append(app.Status.Deployments, tacokumoiov1alpha1.NamespacedName{
-			Namespace: deployment.GetNamespace(),
-			Name:      deployment.GetName(),
-		})
-	}
-
-	podList := corev1.PodList{}
-	err = m.k8sClient.List(ctx, &podList, client.InNamespace(app.Namespace), client.MatchingLabels{
-		tacokumoiov1alpha1.ManagedByLabelKey: "portal-controller",
-	})
-	if err != nil {
-		return err
-	}
-
-	allReady := true
-	for _, pod := range podList.Items {
-		if pod.Status.Phase != corev1.PodRunning {
-			allReady = false
+	for _, relRef := range app.Status.Releases {
+		rel := &tacokumogithubiov1alpha1.Release{}
+		if err := m.k8sClient.Get(ctx, client.ObjectKey{
+			Namespace: relRef.Namespace,
+			Name:      relRef.Name,
+		}, rel); err != nil {
+			return err
 		}
-
-		app.Status.Pods = append(app.Status.Pods, tacokumoiov1alpha1.PodReference{
-			NamespacedName: tacokumoiov1alpha1.NamespacedName{
-				Namespace: pod.GetNamespace(),
-				Name:      pod.GetName(),
-			},
-			Ready: pod.Status.Phase == corev1.PodRunning,
-		})
+		if rel.Status.State != tacokumogithubiov1alpha1.ReleaseStateDeployed {
+			m.logger.Info("waiting for all Releases to be in Deployed state",
+				"release", fmt.Sprintf("%s/%s", rel.Namespace, rel.Name),
+				"state", rel.Status.State,
+			)
+			return nil
+		}
 	}
-
-	if !allReady {
-		// pods are not ready yet, but the controller will requeue automatically
-		return nil
-	}
-
-	// TODO: healthcheckを実行もしくは監視し、成功していることを確認する
-	app.Status.State = tacokumoiov1alpha1.ApplicationStateRunning
+	app.Status.State = tacokumogithubiov1alpha1.ApplicationStateRunning
 	return nil
 }
 
 func (m *Manager) cloneApplicationRepository(
 	ctx context.Context,
-	app *tacokumoiov1alpha1.Application,
+	app *tacokumogithubiov1alpha1.Application,
 ) (repo appconfig.Repository, err error) {
-	fs := memfs.New()
-	storer := memory.NewStorage()
-	gitRepo, err := git.CloneContext(ctx, storer, fs, &git.CloneOptions{
-		URL:           app.Spec.Repo.URL,
-		ReferenceName: plumbing.NewBranchReferenceName(app.Spec.Repo.Ref),
-	})
+	referenceName := app.Spec.ReleaseTemplate.AppConfigBranch
+	if referenceName == "" {
+		referenceName = defaultAppConfigBranch
+	}
+
+	wt, err := m.connector.Clone(ctx, app.Spec.ReleaseTemplate.Repo.URL, referenceName)
 	if err != nil {
 		return appconfig.Repository{}, err
 	}
-	wt, err := gitRepo.Worktree()
-	if err != nil {
-		return appconfig.Repository{}, err
-	}
-	f, err := wt.Filesystem.Open(app.Spec.AppConfigPath)
+
+	f, err := wt.Open(app.Spec.ReleaseTemplate.AppConfigPath)
 	if err != nil {
 		return appconfig.Repository{}, err
 	}
@@ -200,36 +186,17 @@ func (m *Manager) cloneApplicationRepository(
 	}, nil
 }
 
-func (m *Manager) constructValueMap(
-	repo appconfig.Repository,
-	app *tacokumoiov1alpha1.Application,
-) map[string]any {
-	mainValues := map[string]any{
-		"applicationName":  repo.AppConfig.AppName,
-		"replicaCount":     1,
-		"image":            repo.AppConfig.Build.Image,
-		"imagePullPolicy":  "IfNotPresent",
-		"imagePullSecrets": []any{},
-		"annotations": map[string]any{
-			"tacokumo.io/managed-by": "portal-controller",
-		},
-		"podAnnotations": map[string]any{
-			"tacokumo.io/managed-by": "portal-controller",
-		},
-		"envFrom": []any{},
-	}
-
-	if app.Spec.EnvSecretName != nil {
-		mainValues["envFrom"] = []any{
-			map[string]any{
-				"secretRef": map[string]any{
-					"name": *app.Spec.EnvSecretName,
+// setDefaultStages は､AppConfigにStagesが定義されていない場合のデフォルト値を返す
+func (m *Manager) setDefaultStages() []apispec.StageConfig {
+	return []apispec.StageConfig{
+		{
+			Name: "production",
+			Policy: apispec.StagePolicyConfig{
+				Type: "branch",
+				Branch: &apispec.BranchConfig{
+					Name: "main",
 				},
 			},
-		}
-	}
-
-	return map[string]any{
-		"main": mainValues,
+		},
 	}
 }

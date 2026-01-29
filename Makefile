@@ -24,6 +24,10 @@ all: fmt test build lint
 
 ##@ General
 
+.PHONY: submodule
+submodule: ## Initialize and update all git submodules to latest remote changes.
+	git submodule update --init --recursive --remote
+
 # The help target prints out all targets with their descriptions organized
 # beneath their categories. The categories are represented by '##@' and the
 # target descriptions by '##'. The awk command is responsible for reading the

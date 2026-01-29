@@ -5,10 +5,11 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - tacokumo.io
+  - tacokumo.github.io
   resources:
   - applications
   - portals
+  - releases
   verbs:
   - create
   - delete
@@ -18,17 +19,19 @@ rules:
   - update
   - watch
 - apiGroups:
-  - tacokumo.io
+  - tacokumo.github.io
   resources:
   - applications/finalizers
   - portals/finalizers
+  - releases/finalizers
   verbs:
   - update
 - apiGroups:
-  - tacokumo.io
+  - tacokumo.github.io
   resources:
   - applications/status
   - portals/status
+  - releases/status
   verbs:
   - get
   - patch
