@@ -5,10 +5,7 @@ import (
 	"fmt"
 
 	tacokumogithubiov1alpha1 "github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1"
-	"github.com/tacokumo/portal-controller-kubernetes/pkg/appconfig"
 	"github.com/tacokumo/portal-controller-kubernetes/pkg/repoconnector"
-
-	"go.yaml.in/yaml/v3"
 
 	"github.com/go-logr/logr"
 	apispec "github.com/tacokumo/api-spec"
@@ -26,18 +23,15 @@ const (
 type Manager struct {
 	logger    logr.Logger
 	k8sClient client.Client
-	workdir   string
 	connector repoconnector.GitRepositoryConnector
 }
 
 func NewManager(
 	logger logr.Logger,
-	k8sClient client.Client,
-	workdir string) *Manager {
+	k8sClient client.Client) *Manager {
 	return &Manager{
 		logger:    logger,
 		k8sClient: k8sClient,
-		workdir:   workdir,
 		connector: repoconnector.NewDefaultConnector(),
 	}
 }
@@ -94,7 +88,16 @@ func (m *Manager) reconcileOnProvisioningState(
 	ctx context.Context,
 	app *tacokumogithubiov1alpha1.Application,
 ) (err error) {
-	repo, err := m.cloneApplicationRepository(ctx, app)
+	referenceName := app.Spec.ReleaseTemplate.AppConfigBranch
+	if referenceName == "" {
+		referenceName = defaultAppConfigBranch
+	}
+	repo, err := repoconnector.CloneApplicationRepository(
+		ctx,
+		m.connector,
+		app.Spec.ReleaseTemplate.Repo.URL,
+		referenceName,
+		app.Spec.ReleaseTemplate.AppConfigPath)
 	if err != nil {
 		return err
 	}
@@ -152,38 +155,6 @@ func (m *Manager) reconcileOnWaitingState(
 	}
 	app.Status.State = tacokumogithubiov1alpha1.ApplicationStateRunning
 	return nil
-}
-
-func (m *Manager) cloneApplicationRepository(
-	ctx context.Context,
-	app *tacokumogithubiov1alpha1.Application,
-) (repo appconfig.Repository, err error) {
-	referenceName := app.Spec.ReleaseTemplate.AppConfigBranch
-	if referenceName == "" {
-		referenceName = defaultAppConfigBranch
-	}
-
-	wt, err := m.connector.Clone(ctx, app.Spec.ReleaseTemplate.Repo.URL, referenceName)
-	if err != nil {
-		return appconfig.Repository{}, err
-	}
-
-	f, err := wt.Open(app.Spec.ReleaseTemplate.AppConfigPath)
-	if err != nil {
-		return appconfig.Repository{}, err
-	}
-	defer func() {
-		err = f.Close()
-	}()
-
-	appConfig := apispec.AppConfig{}
-	if err := yaml.NewDecoder(f).Decode(&appConfig); err != nil {
-		return appconfig.Repository{}, err
-	}
-
-	return appconfig.Repository{
-		AppConfig: appConfig,
-	}, nil
 }
 
 // setDefaultStages は､AppConfigにStagesが定義されていない場合のデフォルト値を返す

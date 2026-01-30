@@ -34,7 +34,7 @@ func newTestScheme(t *testing.T) *k8sruntime.Scheme {
 
 func newTestManager(t *testing.T, k8sClient client.Client, connector repoconnector.GitRepositoryConnector) *Manager {
 	t.Helper()
-	m := NewManager(logr.Discard(), k8sClient, "")
+	m := NewManager(logr.Discard(), k8sClient)
 	if connector != nil {
 		m.WithConnector(connector)
 	}

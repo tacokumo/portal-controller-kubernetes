@@ -1,0 +1,14 @@
+app_name: test-app
+build:
+  image: "myregistry.example.com/test-app:v1.0.0"
+service:
+  name: web
+  command: ["npm", "start"]
+  http:
+    target_port: 3000
+stages:
+  - name: production
+    policy:
+      type: branch
+      branch:
+        name: main
