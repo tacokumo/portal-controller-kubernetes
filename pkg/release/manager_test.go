@@ -3,7 +3,6 @@ package release
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -25,6 +24,11 @@ import (
 // Helper functions
 
 func testdataPath(subpath string) string {
+	_, file, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(file), "testdata", subpath)
+}
+
+func repoTestdataPath(subpath string) string {
 	_, file, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(file), "..", "repoconnector", "testdata", subpath)
 }
@@ -260,25 +264,8 @@ func TestManager_Reconcile_OnDefaultState(t *testing.T) {
 // Tests for reconcileOnDeployingState
 
 func TestManager_reconcileOnDeployingState(t *testing.T) {
-	// Create a temporary workdir for helm-charts
-	tempWorkdir, err := os.MkdirTemp("", "release-test-*")
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		err := os.RemoveAll(tempWorkdir)
-		require.NoError(t, err)
-	})
-
-	// Setup helm chart path by copying from helmutil testdata
-	chartPath := filepath.Join(tempWorkdir, "helm-charts", "charts", "tacokumo-application")
-	err = os.MkdirAll(chartPath, 0755)
-	require.NoError(t, err)
-
-	// Copy test chart from helmutil/testdata
-	_, file, _, _ := runtime.Caller(0)
-	srcChart := filepath.Join(filepath.Dir(file), "..", "helmutil", "testdata", "test-chart")
-
-	err = os.MkdirAll(filepath.Dir(chartPath), 0755)
-	require.NoError(t, err)
+	// Use testdata directory as workdir
+	workdir := testdataPath("")
 
 	tests := []struct {
 		name             string
@@ -336,15 +323,6 @@ func TestManager_reconcileOnDeployingState(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup chart for each test that needs it
-			if tt.setupChart {
-				err := os.RemoveAll(chartPath)
-				require.NoError(t, err)
-				err = os.MkdirAll(chartPath, 0755)
-				require.NoError(t, err)
-				copyTestChart(t, srcChart, chartPath)
-			}
-
 			scheme := newTestScheme(t)
 
 			rel := &tacokumogithubiov1alpha1.Release{
@@ -371,9 +349,9 @@ func TestManager_reconcileOnDeployingState(t *testing.T) {
 				WithStatusSubresource(rel).
 				Build()
 
-			connector := repoconnector.NewLocalConnector(testdataPath(tt.testdataDir))
+			connector := repoconnector.NewLocalConnector(repoTestdataPath(tt.testdataDir))
 
-			m := newTestManager(t, k8sClient, connector, tempWorkdir)
+			m := newTestManager(t, k8sClient, connector, workdir)
 
 			err := m.reconcileOnDeployingState(context.Background(), rel)
 
@@ -384,41 +362,6 @@ func TestManager_reconcileOnDeployingState(t *testing.T) {
 			}
 		})
 	}
-}
-
-// Helper function to create minimal test chart
-func copyTestChart(t *testing.T, _ string, dst string) {
-	t.Helper()
-	// Always create a minimal chart structure that matches our Values schema
-	err := os.MkdirAll(filepath.Join(dst, "templates"), 0755)
-	require.NoError(t, err)
-
-	chartYaml := `apiVersion: v2
-name: test-chart
-version: 0.1.0
-`
-	err = os.WriteFile(filepath.Join(dst, "Chart.yaml"), []byte(chartYaml), 0644)
-	require.NoError(t, err)
-
-	valuesYaml := `main:
-  applicationName: ""
-  image: ""
-  replicaCount: 1
-`
-	err = os.WriteFile(filepath.Join(dst, "values.yaml"), []byte(valuesYaml), 0644)
-	require.NoError(t, err)
-
-	template := `apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Values.main.applicationName }}
-  namespace: {{ .Release.Namespace }}
-data:
-  image: "{{ .Values.main.image }}"
-  replicaCount: "{{ .Values.main.replicaCount }}"
-`
-	err = os.WriteFile(filepath.Join(dst, "templates", "configmap.yaml"), []byte(template), 0644)
-	require.NoError(t, err)
 }
 
 func stringPtr(s string) *string {

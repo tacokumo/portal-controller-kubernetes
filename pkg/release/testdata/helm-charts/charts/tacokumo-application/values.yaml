@@ -1,0 +1,4 @@
+main:
+  applicationName: ""
+  image: ""
+  replicaCount: 1
