@@ -26,7 +26,7 @@ all: fmt test build lint
 
 .PHONY: submodule
 submodule: ## Initialize and update all git submodules to latest remote changes.
-	git submodule update --init --recursive --remote
+	git submodule update --init --remote
 
 # The help target prints out all targets with their descriptions organized
 # beneath their categories. The categories are represented by '##@' and the
