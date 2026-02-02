@@ -104,6 +104,7 @@ func (m *Manager) reconcileOnDeployingState(
 		}
 	}
 
+	rel.Status.State = tacokumogithubiov1alpha1.ReleaseStateDeployed
 	return nil
 }
 
