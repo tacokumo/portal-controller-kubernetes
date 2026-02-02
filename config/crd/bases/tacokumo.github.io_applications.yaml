@@ -14,7 +14,24 @@ spec:
     singular: application
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Current state of the Application
+      jsonPath: .status.state
+      name: STATE
+      type: string
+    - description: Release names
+      jsonPath: .status.releases[*].name
+      name: RELEASES
+      priority: 1
+      type: string
+    - description: Ready condition status
+      jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: READY
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Application is the Schema for the applications API

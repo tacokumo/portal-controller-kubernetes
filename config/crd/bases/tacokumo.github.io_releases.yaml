@@ -14,7 +14,28 @@ spec:
     singular: release
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Current state of the Release
+      jsonPath: .status.state
+      name: STATE
+      type: string
+    - description: Repository URL
+      jsonPath: .spec.repo.url
+      name: REPO
+      priority: 1
+      type: string
+    - description: Git commit hash
+      jsonPath: .spec.commit
+      name: COMMIT
+      type: string
+    - description: Ready condition status
+      jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: READY
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Release is the Schema for the releases API

@@ -68,6 +68,10 @@ const (
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="STATE",type=string,JSONPath=`.status.state`,description="Current state of the Application"
+// +kubebuilder:printcolumn:name="RELEASES",type=string,JSONPath=`.status.releases[*].name`,description="Release names",priority=1
+// +kubebuilder:printcolumn:name="READY",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`,description="Ready condition status"
+// +kubebuilder:printcolumn:name="AGE",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Application is the Schema for the applications API
 type Application struct {
