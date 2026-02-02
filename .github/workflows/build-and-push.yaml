@@ -24,6 +24,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # helm-charts submodule contains this repo as submodule (circular reference)
+          # Use 'true' instead of 'recursive' to avoid infinite recursion
+          submodules: true
 
       - name: Docker meta
         id: meta
