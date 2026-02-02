@@ -4,8 +4,7 @@ import (
 	"context"
 	"io"
 
-	apispec "github.com/tacokumo/api-spec"
-	"github.com/tacokumo/portal-controller-kubernetes/pkg/appconfig"
+	appconfig "github.com/tacokumo/appconfig"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -29,26 +28,24 @@ func CloneApplicationRepository(
 	url string,
 	refName string,
 	appConfigPath string,
-) (repo appconfig.Repository, err error) {
+) (cfg appconfig.AppConfig, err error) {
 	wt, err := connector.Clone(ctx, url, refName)
 	if err != nil {
-		return appconfig.Repository{}, err
+		return appconfig.AppConfig{}, err
 	}
 
 	f, err := wt.Open(appConfigPath)
 	if err != nil {
-		return appconfig.Repository{}, err
+		return appconfig.AppConfig{}, err
 	}
 	defer func() {
 		err = f.Close()
 	}()
 
-	appConfig := apispec.AppConfig{}
-	if err := yaml.NewDecoder(f).Decode(&appConfig); err != nil {
-		return appconfig.Repository{}, err
+	var appCfg appconfig.AppConfig
+	if err := yaml.NewDecoder(f).Decode(&appCfg); err != nil {
+		return appconfig.AppConfig{}, err
 	}
 
-	return appconfig.Repository{
-		AppConfig: appConfig,
-	}, nil
+	return appCfg, nil
 }

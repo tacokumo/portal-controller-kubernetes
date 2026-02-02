@@ -8,13 +8,12 @@ import (
 	"testing"
 
 	tacokumogithubiov1alpha1 "github.com/tacokumo/portal-controller-kubernetes/api/v1alpha1"
-	"github.com/tacokumo/portal-controller-kubernetes/pkg/appconfig"
 	"github.com/tacokumo/portal-controller-kubernetes/pkg/repoconnector"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	apispec "github.com/tacokumo/api-spec"
+	appconfig "github.com/tacokumo/appconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -77,7 +76,12 @@ func TestManager_constructReleaseValues(t *testing.T) {
 
 				assert.Equal(t, "test-release", main["applicationName"])
 				assert.Equal(t, "myregistry.example.com/app:v1.0.0", main["image"])
-				assert.Equal(t, 1, main["replicaCount"])
+
+				// HPA controls replica count, so check HPA config instead
+				hpa, ok := main["hpa"].(map[string]interface{})
+				require.True(t, ok, "hpa should be a map")
+				assert.Equal(t, 1, hpa["minReplicas"])
+				assert.Equal(t, 1, hpa["maxReplicas"])
 			},
 		},
 		{
@@ -92,13 +96,15 @@ func TestManager_constructReleaseValues(t *testing.T) {
 			},
 		},
 		{
-			name:        "sets replica count to 1",
+			name:        "sets default HPA min/max replicas to 1",
 			releaseName: "replica-test",
 			image:       "test-image:latest",
 			expectError: false,
 			validateFunc: func(t *testing.T, values map[string]interface{}) {
 				main := values["main"].(map[string]interface{})
-				assert.Equal(t, 1, main["replicaCount"])
+				hpa := main["hpa"].(map[string]interface{})
+				assert.Equal(t, 1, hpa["minReplicas"])
+				assert.Equal(t, 1, hpa["maxReplicas"])
 			},
 		},
 	}
@@ -116,15 +122,13 @@ func TestManager_constructReleaseValues(t *testing.T) {
 				},
 			}
 
-			repo := &appconfig.Repository{
-				AppConfig: apispec.AppConfig{
-					Build: apispec.BuildConfig{
-						Image: tt.image,
-					},
+			appCfg := &appconfig.AppConfig{
+				Build: appconfig.BuildConfig{
+					Image: tt.image,
 				},
 			}
 
-			values, err := m.constructReleaseValues(rel, repo)
+			values, err := m.constructReleaseValues(rel, appCfg)
 
 			if tt.expectError {
 				assert.Error(t, err)

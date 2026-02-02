@@ -27,6 +27,8 @@ func (c *DefaultConnector) Clone(ctx context.Context, url string, branch string)
 	gitRepo, err := git.CloneContext(ctx, storer, fs, &git.CloneOptions{
 		URL:           url,
 		ReferenceName: plumbing.NewBranchReferenceName(branch),
+		SingleBranch:  true,
+		Depth:         1,
 	})
 	if err != nil {
 		return nil, err

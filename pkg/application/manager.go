@@ -8,7 +8,7 @@ import (
 	"github.com/tacokumo/portal-controller-kubernetes/pkg/repoconnector"
 
 	"github.com/go-logr/logr"
-	apispec "github.com/tacokumo/api-spec"
+	appconfig "github.com/tacokumo/appconfig"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -92,7 +92,7 @@ func (m *Manager) reconcileOnProvisioningState(
 	if referenceName == "" {
 		referenceName = defaultAppConfigBranch
 	}
-	repo, err := repoconnector.CloneApplicationRepository(
+	appCfg, err := repoconnector.CloneApplicationRepository(
 		ctx,
 		m.connector,
 		app.Spec.ReleaseTemplate.Repo.URL,
@@ -102,12 +102,12 @@ func (m *Manager) reconcileOnProvisioningState(
 		return err
 	}
 
-	if len(repo.AppConfig.Stages) == 0 {
-		repo.AppConfig.Stages = m.setDefaultStages()
+	if len(appCfg.Stages) == 0 {
+		appCfg.Stages = m.setDefaultStages()
 	}
 
-	app.Status.Releases = make([]corev1.ObjectReference, 0, len(repo.AppConfig.Stages))
-	for _, stage := range repo.AppConfig.Stages {
+	app.Status.Releases = make([]corev1.ObjectReference, 0, len(appCfg.Stages))
+	for _, stage := range appCfg.Stages {
 		rel := tacokumogithubiov1alpha1.Release{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: app.Namespace,
@@ -158,13 +158,13 @@ func (m *Manager) reconcileOnWaitingState(
 }
 
 // setDefaultStages は､AppConfigにStagesが定義されていない場合のデフォルト値を返す
-func (m *Manager) setDefaultStages() []apispec.StageConfig {
-	return []apispec.StageConfig{
+func (m *Manager) setDefaultStages() []appconfig.StageConfig {
+	return []appconfig.StageConfig{
 		{
 			Name: "production",
-			Policy: apispec.StagePolicyConfig{
+			Policy: appconfig.StagePolicyConfig{
 				Type: "branch",
-				Branch: &apispec.BranchConfig{
+				Branch: &appconfig.BranchConfig{
 					Name: "main",
 				},
 			},
