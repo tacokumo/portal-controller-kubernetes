@@ -2,11 +2,13 @@ package repoconnector
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/go-git/go-billy/v6"
 	"github.com/go-git/go-billy/v6/memfs"
 	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/config"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/storage/memory"
 )
@@ -40,6 +42,29 @@ func (c *DefaultConnector) Clone(ctx context.Context, url string, branch string)
 	}
 
 	return &defaultWorktree{fs: wt.Filesystem}, nil
+}
+
+// GetLatestCommit は指定されたブランチの最新コミットハッシュを取得する
+func (c *DefaultConnector) GetLatestCommit(ctx context.Context, url string, branch string) (string, error) {
+	// ls-remote 相当の操作でリモートの参照を取得
+	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{url},
+	})
+
+	refs, err := remote.ListContext(ctx, &git.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	branchRef := plumbing.NewBranchReferenceName(branch)
+	for _, ref := range refs {
+		if ref.Name() == branchRef {
+			return ref.Hash().String(), nil
+		}
+	}
+
+	return "", fmt.Errorf("branch %q not found in repository %s", branch, url)
 }
 
 // defaultWorktree は go-git の worktree を Worktree インターフェースに適合させる

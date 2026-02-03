@@ -145,6 +145,15 @@ func (m *Manager) handleError(
 ) error {
 	// 引数のerrorは必ずnilではない
 	p.Status.State = tacokumogithubiov1alpha1.PortalStateError
+
+	// Ready Conditionを設定し、エラーメッセージを記録
+	tacokumogithubiov1alpha1.SetReadyConditionFalse(
+		&p.Status.Conditions,
+		p.Generation,
+		tacokumogithubiov1alpha1.ReasonReconcileError,
+		err.Error(),
+	)
+
 	// errorだとしても､Statusの更新は必要
 	if updateErr := m.k8sClient.Status().Update(ctx, p); updateErr != nil {
 		return updateErr

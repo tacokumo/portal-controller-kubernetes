@@ -71,7 +71,7 @@ const (
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name="STATE",type=string,JSONPath=`.status.state`,description="Current state of the Portal"
-// +kubebuilder:printcolumn:name="READY",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`,description="Ready condition status"
+// +kubebuilder:printcolumn:name="MESSAGE",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].message`,description="Status message",priority=1
 // +kubebuilder:printcolumn:name="AGE",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Portal is the Schema for the portals API

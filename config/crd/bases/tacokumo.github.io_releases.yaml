@@ -28,9 +28,10 @@ spec:
       jsonPath: .spec.commit
       name: COMMIT
       type: string
-    - description: Ready condition status
-      jsonPath: .status.conditions[?(@.type=="Ready")].status
-      name: READY
+    - description: Status message
+      jsonPath: .status.conditions[?(@.type=="Ready")].message
+      name: MESSAGE
+      priority: 1
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: AGE

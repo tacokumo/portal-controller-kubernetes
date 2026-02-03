@@ -71,7 +71,7 @@ const (
 // +kubebuilder:printcolumn:name="STATE",type=string,JSONPath=`.status.state`,description="Current state of the Release"
 // +kubebuilder:printcolumn:name="REPO",type=string,JSONPath=`.spec.repo.url`,description="Repository URL",priority=1
 // +kubebuilder:printcolumn:name="COMMIT",type=string,JSONPath=`.spec.commit`,description="Git commit hash"
-// +kubebuilder:printcolumn:name="READY",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`,description="Ready condition status"
+// +kubebuilder:printcolumn:name="MESSAGE",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].message`,description="Status message",priority=1
 // +kubebuilder:printcolumn:name="AGE",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Release is the Schema for the releases API

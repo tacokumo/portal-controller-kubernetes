@@ -66,10 +66,10 @@ func (m *Manager) reconcileOnDeployingState(
 	ctx context.Context,
 	rel *tacokumogithubiov1alpha1.Release,
 ) error {
-	referenceName := rel.Spec.AppConfigBranch
-	if referenceName == "" {
-		referenceName = *rel.Spec.Commit
+	if rel.Spec.Commit == nil {
+		return fmt.Errorf("spec.commit is required")
 	}
+	referenceName := *rel.Spec.Commit
 	appCfg, err := repoconnector.CloneApplicationRepository(
 		ctx,
 		m.connector,
@@ -115,6 +115,15 @@ func (m *Manager) handleError(
 ) error {
 	// 引数のerrorは必ずnilではない
 	rel.Status.State = tacokumogithubiov1alpha1.ReleaseStateFailed
+
+	// Ready Conditionを設定し、エラーメッセージを記録
+	tacokumogithubiov1alpha1.SetReadyConditionFalse(
+		&rel.Status.Conditions,
+		rel.Generation,
+		tacokumogithubiov1alpha1.ReasonReconcileError,
+		err.Error(),
+	)
+
 	// errorだとしても､Statusの更新は必要
 	if updateErr := m.k8sClient.Status().Update(ctx, rel); updateErr != nil {
 		return updateErr

@@ -14,6 +14,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -77,6 +78,15 @@ func (m *Manager) handleError(
 ) error {
 	// 引数のerrorは必ずnilではない
 	app.Status.State = tacokumogithubiov1alpha1.ApplicationStateError
+
+	// Ready Conditionを設定し、エラーメッセージを記録
+	tacokumogithubiov1alpha1.SetReadyConditionFalse(
+		&app.Status.Conditions,
+		app.Generation,
+		tacokumogithubiov1alpha1.ReasonReconcileError,
+		err.Error(),
+	)
+
 	// errorだとしても､Statusの更新は必要
 	if updateErr := m.k8sClient.Status().Update(ctx, app); updateErr != nil {
 		return updateErr
@@ -108,6 +118,16 @@ func (m *Manager) reconcileOnProvisioningState(
 
 	app.Status.Releases = make([]corev1.ObjectReference, 0, len(appCfg.Stages))
 	for _, stage := range appCfg.Stages {
+		if stage.Policy.Branch == nil {
+			return fmt.Errorf("stage %q: branch policy is required but not configured", stage.Name)
+		}
+		branchName := stage.Policy.Branch.Name
+
+		latestCommit, err := m.connector.GetLatestCommit(ctx, app.Spec.ReleaseTemplate.Repo.URL, branchName)
+		if err != nil {
+			return fmt.Errorf("failed to get latest commit for branch %q: %w", branchName, err)
+		}
+
 		rel := tacokumogithubiov1alpha1.Release{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: app.Namespace,
@@ -117,6 +137,7 @@ func (m *Manager) reconcileOnProvisioningState(
 
 		if _, err := controllerutil.CreateOrUpdate(ctx, m.k8sClient, &rel, func() error {
 			rel.Spec = app.Spec.ReleaseTemplate
+			rel.Spec.Commit = ptr.To(latestCommit)
 			return nil
 		}); err != nil {
 			return err

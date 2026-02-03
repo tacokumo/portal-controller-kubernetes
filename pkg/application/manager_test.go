@@ -46,30 +46,42 @@ func TestManager_Reconcile_OnProvisioningState(t *testing.T) {
 		name                 string
 		testdataDir          string
 		appConfigPath        string
+		latestCommits        map[string]string
 		expectedState        string
 		expectError          bool
 		expectedReleaseCount int
 	}{
 		{
-			name:                 "valid appconfig with stages creates releases and transitions to Waiting",
-			testdataDir:          "valid-appconfig",
-			appConfigPath:        "appconfig.yaml",
+			name:          "valid appconfig with stages creates releases and transitions to Waiting",
+			testdataDir:   "valid-appconfig",
+			appConfigPath: "appconfig.yaml",
+			latestCommits: map[string]string{
+				"staging": "abc123staging",
+				"main":    "def456main",
+			},
 			expectedState:        tacokumogithubiov1alpha1.ApplicationStateWaiting,
 			expectError:          false,
 			expectedReleaseCount: 2, // staging, production
 		},
 		{
-			name:                 "empty stages uses default stages",
-			testdataDir:          "empty-stages",
-			appConfigPath:        "appconfig.yaml",
+			name:          "empty stages uses default stages",
+			testdataDir:   "empty-stages",
+			appConfigPath: "appconfig.yaml",
+			latestCommits: map[string]string{
+				"main": "def456main",
+			},
 			expectedState:        tacokumogithubiov1alpha1.ApplicationStateWaiting,
 			expectError:          false,
 			expectedReleaseCount: 1, // production (default)
 		},
 		{
-			name:                 "non-existent appconfig file causes error",
-			testdataDir:          "valid-appconfig",
-			appConfigPath:        "non-existent.yaml",
+			name:          "non-existent appconfig file causes error",
+			testdataDir:   "valid-appconfig",
+			appConfigPath: "non-existent.yaml",
+			latestCommits: map[string]string{
+				"staging": "abc123staging",
+				"main":    "def456main",
+			},
 			expectedState:        tacokumogithubiov1alpha1.ApplicationStateError,
 			expectError:          true,
 			expectedReleaseCount: 0,
@@ -100,7 +112,8 @@ func TestManager_Reconcile_OnProvisioningState(t *testing.T) {
 				WithStatusSubresource(app).
 				Build()
 
-			connector := repoconnector.NewLocalConnector(testdataPath(tt.testdataDir))
+			connector := repoconnector.NewLocalConnector(testdataPath(tt.testdataDir)).
+				WithLatestCommits(tt.latestCommits)
 			m := newTestManager(t, k8sClient, connector)
 
 			err := m.Reconcile(t.Context(), app)
@@ -114,6 +127,60 @@ func TestManager_Reconcile_OnProvisioningState(t *testing.T) {
 			assert.Len(t, app.Status.Releases, tt.expectedReleaseCount)
 		})
 	}
+}
+
+func TestManager_Reconcile_OnProvisioningState_SetsCommit(t *testing.T) {
+	scheme := newTestScheme(t)
+	app := &tacokumogithubiov1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-app",
+		},
+		Spec: tacokumogithubiov1alpha1.ApplicationSpec{
+			ReleaseTemplate: tacokumogithubiov1alpha1.ReleaseSpec{
+				AppConfigPath: "appconfig.yaml",
+			},
+		},
+		Status: tacokumogithubiov1alpha1.ApplicationStatus{
+			State: tacokumogithubiov1alpha1.ApplicationStateProvisioning,
+		},
+	}
+
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(app).
+		WithStatusSubresource(app).
+		Build()
+
+	latestCommits := map[string]string{
+		"staging": "abc123staging",
+		"main":    "def456main",
+	}
+	connector := repoconnector.NewLocalConnector(testdataPath("valid-appconfig")).
+		WithLatestCommits(latestCommits)
+	m := newTestManager(t, k8sClient, connector)
+
+	err := m.Reconcile(t.Context(), app)
+	require.NoError(t, err)
+
+	// Verify that Release resources have the correct commit set
+	stagingRelease := &tacokumogithubiov1alpha1.Release{}
+	err = k8sClient.Get(t.Context(), client.ObjectKey{
+		Namespace: "default",
+		Name:      "test-app-staging",
+	}, stagingRelease)
+	require.NoError(t, err)
+	require.NotNil(t, stagingRelease.Spec.Commit)
+	assert.Equal(t, "abc123staging", *stagingRelease.Spec.Commit)
+
+	productionRelease := &tacokumogithubiov1alpha1.Release{}
+	err = k8sClient.Get(t.Context(), client.ObjectKey{
+		Namespace: "default",
+		Name:      "test-app-production",
+	}, productionRelease)
+	require.NoError(t, err)
+	require.NotNil(t, productionRelease.Spec.Commit)
+	assert.Equal(t, "def456main", *productionRelease.Spec.Commit)
 }
 
 func TestManager_Reconcile_OnWaitingState(t *testing.T) {

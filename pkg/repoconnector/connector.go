@@ -13,6 +13,8 @@ import (
 type GitRepositoryConnector interface {
 	// Clone はリポジトリをcloneし、Worktreeを返す
 	Clone(ctx context.Context, url string, branch string) (Worktree, error)
+	// GetLatestCommit は指定されたブランチの最新コミットハッシュを取得する
+	GetLatestCommit(ctx context.Context, url string, branch string) (string, error)
 }
 
 // Worktree はGitのworktreeを抽象化するインターフェース
